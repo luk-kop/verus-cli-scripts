@@ -1,11 +1,22 @@
 #!/bin/bash
 
+# Enter your data below:
 email_to_notify="user@example.com"
+username="username"
+
 service="verusd"
-user_home_dir="/home/${USER}"
+user_home_dir="/home/${username}"
 script_name="$(basename "$(test -L "$0" && readlink "$0" || echo "$0")")"
 txcount_history_file="${user_home_dir}/txcount_hist.txt"
 verus_logs_dir=${user_home_dir}/verus-logs
+
+
+# Function send email msg to email address specified in 'email_to_notify' var. 
+send_email () {
+    local email_subject=$1
+    local email_body=$2
+    echo -e "${email_body}" | mail -s "${email_subject}" $email_to_notify
+}
 
 # If verusd is NOT running copy 'debug.log' file, send email and exit script.
 if ! pgrep -x "$service" > /dev/null
@@ -14,7 +25,7 @@ then
     mkdir -p $verus_logs_dir
     # Copy last 'debug.log' file
     cp -u ${user_home_dir}/.komodo/VRSC/debug.log $verus_logs_dir/$(date +%Y%m%d%H%M)debug.log
-    echo -e "The '$service' is not running.\nSend from script '$script_name'" | mail -s "Local wallet problem!" -a "From: ${USER}@$(hostname).local" $email_to_notify
+    send_email "Local wallet problem!" "The '$service' is not running.\nSend from script '$script_name'"
     exit 1
 fi
 
@@ -31,7 +42,7 @@ txcount_current=$(${user_home_dir}/verus-cli/verus getwalletinfo | grep txcount 
 # If txcount_current variable is NOT integer send mail and exit script.
 if ! [[ "$txcount_current" =~ ^[0-9]+$ ]]
 then
-    echo -e "The 'verusd' is running, but output for call 'verus getwalletinfo | grep txcount...' is not integer. \nSend from script '$script_name'" | mail -s "Local wallet problem!" -a "From: ${USER}@$(hostname).local" $email_to_notify
+    send_email "Local wallet problem!" "The 'verusd' is running, but output for call 'verus getwalletinfo | grep txcount...' is not integer. \nSend from script '$script_name'"
     exit 1
 fi
 
@@ -44,7 +55,7 @@ then
     # Send email notification only when immature_balance is != 0
     if [[ $stakevalue != 0.00000000 ]]
     then
-        echo "You have new tx in your VRSC wallet! -> $stakevalue VRSC" | mail -s "New tx in wallet" -a "From: ${USER}@$(hostname).local" $email_to_notify
+        send_email "New tx in wallet" "You have new tx in your VRSC wallet! -> $stakevalue VRSC"
     fi
 else
     # For tests
