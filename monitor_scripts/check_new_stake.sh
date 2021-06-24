@@ -1,8 +1,9 @@
 #!/bin/bash
 
-# Enter your data below:
-email_to_notify="user@example.com"
-username="username"
+# Load data
+source ../.env
+email_to_notify=$EMAIL_TO_NOTIFY
+username=$USERNAME
 
 service="verusd"
 user_home_dir="/home/${username}"
