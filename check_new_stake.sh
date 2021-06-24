@@ -11,11 +11,16 @@ txcount_history_file="${user_home_dir}/txcount_hist.txt"
 verus_logs_dir=${user_home_dir}/verus-logs
 
 
-# Function send email msg to email address specified in 'email_to_notify' var. 
+# Function sends email msg to email address specified in 'email_to_notify' var. 
 send_email () {
     local email_subject=$1
     local email_body=$2
     echo -e "${email_body}" | mail -s "${email_subject}" $email_to_notify
+}
+
+# Function deletes 'debug.log' files older than 10 days except the last log.
+remove_old_log_files () {
+    find $verus_logs_dir -type f -name "*.log" -printf '%T@\t%p\n' | sort -t $'\t' -g | head -n -1 | awk '{print $2}' | xargs -I{} find '{}' -mtime +10 -delete
 }
 
 # If verusd is NOT running copy 'debug.log' file, send email and exit script.
@@ -26,10 +31,17 @@ then
     # Copy last 'debug.log' file
     cp -u ${user_home_dir}/.komodo/VRSC/debug.log $verus_logs_dir/$(date +%Y%m%d%H%M)debug.log
     send_email "Local wallet problem!" "The '$service' is not running.\nSend from script '$script_name'"
+    remove_old_log_files
     exit 1
 fi
 
-# Create txcount_hist.txt file if NOT exists or value stored in txcount_hist.txt file is NOT integer
+# Remove old logs if 'verus_logs_dir' exists.
+if [ -d "$verus_logs_dir" ]
+then
+    remove_old_log_files
+fi
+
+# Create txcount_hist.txt file if NOT exists or value stored in txcount_hist.txt file is NOT integer.
 if [ ! -f $txcount_history_file ] || ! [[ "$(cat ${txcount_history_file})" =~ ^[0-9]+$ ]]
 then
     echo "0" > $txcount_history_file
