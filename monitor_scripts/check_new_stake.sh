@@ -1,13 +1,12 @@
 #!/bin/bash
 
-# Load data
+# Load data from .env
 source ../.env
 email_to_notify=$EMAIL_TO_NOTIFY
-username=$USERNAME
 
 service="verusd"
-user_home_dir="/home/${username}"
-script_name="$(basename "$(test -L "$0" && readlink "$0" || echo "$0")")"
+user_home_dir=$HOME
+script_name=$(basename $(realpath "$0"))
 txcount_history_file="${user_home_dir}/txcount_hist.txt"
 verus_logs_dir=${user_home_dir}/verus-logs
 
@@ -21,7 +20,7 @@ send_email () {
 
 # Function deletes 'debug.log' files older than 10 days except the last log.
 remove_old_log_files () {
-    find $verus_logs_dir -type f -name "*.log" -printf '%T@\t%p\n' | sort -t $'\t' -g | head -n -1 | awk '{print $2}' | xargs -I{} find '{}' -mtime +10 -delete
+    find $verus_logs_dir -type f -name "*debug.log" -printf '%T@\t%p\n' | sort -t $'\t' -g | head -n -1 | awk '{print $2}' | xargs -I{} find '{}' -mtime +10 -delete
 }
 
 # If verusd is NOT running copy 'debug.log' file, send email and exit script.
@@ -64,13 +63,10 @@ if (($txcount_current > $txcount_history))
 then
     # Update txcount_history
     echo $txcount_current > $txcount_history_file
-    stakevalue=$(${user_home_dir}/verus-cli/verus getwalletinfo | grep immature_balance | awk '{print $2}' | sed 's/,$//')
+    stake_value=$(${user_home_dir}/verus-cli/verus getwalletinfo | grep immature_balance | awk '{print $2}' | sed 's/,$//')
     # Send email notification only when immature_balance is != 0
-    if [[ $stakevalue != 0.00000000 ]]
+    if [[ $stake_value != 0.00000000 ]]
     then
-        send_email "New tx in wallet" "You have new tx in your VRSC wallet! -> $stakevalue VRSC"
+        send_email "New tx in wallet" "You have new tx in your VRSC wallet! -> $stake_value VRSC"
     fi
-else
-    # For tests
-    no_change="1"
 fi
