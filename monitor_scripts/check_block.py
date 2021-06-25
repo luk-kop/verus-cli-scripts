@@ -54,7 +54,7 @@ def create_log():
     formatter = logging.Formatter('%(asctime)s %(message)s')
     handler.setFormatter(formatter)
     logger_custom.addHandler(handler)
-    logger_custom.setLevel(logging.WARN)
+    logger_custom.setLevel(logging.INFO)
     return logger_custom
 
 
@@ -71,8 +71,12 @@ if __name__ == '__main__':
     # Load data from .env file
     env_data = dotenv_values(env_path)
     email_address = env_data.get('EMAIL_TO_NOTIFY')
+    email_notification = env_data.get('EMAIL_NOTIFICATION')
     if not email_address:
         logger.error('The EMAIL_TO_NOTIFY in .env is missing.')
+        sys.exit()
+    if not email_notification or not email_notification == 'on':
+        logger.info(f'The email notification is turned off. Check EMAIL_NOTIFICATION value in .env.')
         sys.exit()
 
     # Get verus_cli dir path.

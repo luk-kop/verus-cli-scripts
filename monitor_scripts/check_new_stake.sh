@@ -3,6 +3,13 @@
 # Load data from .env
 source ../.env
 email_to_notify=$EMAIL_TO_NOTIFY
+email_notification=$EMAIL_NOTIFICATION
+
+# Exit script if $EMAIL_NOTIFICATION value is different than "on" or not assigned.
+if [ -z "$email_notification" ] || [ "$email_notification" != "on" ]
+then
+    exit 1
+fi
 
 service="verusd"
 user_home_dir=$HOME
