@@ -53,13 +53,13 @@ Other prerequisites:
     ```
 2. Run following commands in order to create virtual environment (`virtualenv`) and install the required packages (only necessary for `check_block.py` script).
     ```bash
-    # install virtualenv package if required
-    $ sudo pip3 install virtualenv
-    # create virtual environment
+    # create virtual environment with 'venv' name
     $ python3 -m venv venv
+    # activate 'venv'
     $ source venv/bin/activate
+    # install required Python packages
     (venv) $ pip install -r requirements.txt
-    # deactivate virtual environment after package installation
+    # deactivate virtual environment after packages installation
     (venv) $ deactivate
     ```
 
