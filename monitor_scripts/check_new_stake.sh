@@ -25,9 +25,9 @@ send_email () {
     echo -e "${email_body}" | mail -s "${email_subject}" $email_to_notify
 }
 
-# Function deletes 'debug.log' files older than 10 days except the last log.
+# Function deletes 'debug.log' files older than 60 minutes except the last log.
 remove_old_log_files () {
-    find $verus_logs_dir -type f -name "*debug.log" -printf '%T@\t%p\n' | sort -t $'\t' -g | head -n -1 | awk '{print $2}' | xargs -I{} find '{}' -mtime +10 -delete
+    find $verus_logs_dir -type f -name "*debug.log" -printf '%T@\t%p\n' | sort -t $'\t' -g | head -n -1 | awk '{print $2}' | xargs -I{} find '{}' -mmin +60 -delete
 }
 
 # If verusd is NOT running copy 'debug.log' file, send email and exit script.
