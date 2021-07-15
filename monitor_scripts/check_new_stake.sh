@@ -1,7 +1,16 @@
 #!/bin/bash
 
+# Get ../.env file
+env_dir="$(dirname "$(dirname "$(readlink -fm "$0")")")"
+env_file=$env_dir/.env
+
+if [ ! -f "$env_file" ]
+then
+    echo "File ${env_file} not exists!"
+    exit 1
+fi
 # Load data from .env
-source ../.env
+source "$env_file"
 email_to_notify=$EMAIL_TO_NOTIFY
 email_notification=$EMAIL_NOTIFICATION
 
@@ -16,13 +25,13 @@ user_home_dir=$HOME
 script_name=$(basename $(realpath "$0"))
 txcount_history_file="${user_home_dir}/txcount_hist.txt"
 verus_logs_dir=${user_home_dir}/verus-logs
-
+verus_debug_log=${user_home_dir}/.komodo/VRSC/debug.log
 
 # Function sends email msg to email address specified in 'email_to_notify' var. 
 send_email () {
     local email_subject=$1
     local email_body=$2
-    echo -e "${email_body}" | mail -s "${email_subject}" $email_to_notify
+#    echo -e "${email_body}" | mail -s "${email_subject}" $email_to_notify
 }
 
 # Function deletes 'debug.log' files older than 60 minutes except the last log.
@@ -30,13 +39,26 @@ remove_old_log_files () {
     find $verus_logs_dir -type f -name "*debug.log" -printf '%T@\t%p\n' | sort -t $'\t' -g | head -n -1 | awk '{print $2}' | xargs -I{} find '{}' -mmin +60 -delete
 }
 
+# Function calculate MD5 hash of specified file.
+get_md5_checksum (){
+  md5sum "$1" 2> /dev/null | awk '{ print $1 }'
+}
+
 # If verusd is NOT running copy 'debug.log' file, send email and exit script.
 if ! pgrep -x "$service" > /dev/null
 then
     # Create verus-logs dir if not exist
     mkdir -p $verus_logs_dir
-    # Copy last 'debug.log' file
-    cp -u ${user_home_dir}/.komodo/VRSC/debug.log $verus_logs_dir/$(date +%Y%m%d%H%M)debug.log
+    # Archive last VRSC 'debug.log' file. Do not copy if that log file already exist in $verus_logs_dir
+    md5_verus_debug_log=$(get_md5_checksum $verus_debug_log)
+    # Find most recent '*debug.log' file ins $verus_logs_dir
+    verus_debug_log_last=$(find $verus_logs_dir -type f -iname '*debug.log' -printf "%T@ %p\n" | sort -n | cut -d' ' -f 2- | tail -n 1)
+    md5_verus_debug_log_last=$(get_md5_checksum $verus_debug_log_last)
+    # Copy the 'debug.log' only if MD5 hashes of most recent '*debug.log' and 'debug.log' are different.
+    if [ "$md5_verus_debug_log" != "$md5_verus_debug_log_last" ]
+    then
+        cp -u $verus_debug_log $verus_logs_dir/$(date +%Y%m%d%H%M)debug.log
+    fi
     send_email "Local wallet problem!" "The '$service' is not running.\nSend from script '$script_name'"
     remove_old_log_files
     exit 1
