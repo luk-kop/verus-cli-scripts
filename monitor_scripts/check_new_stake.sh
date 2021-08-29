@@ -23,7 +23,7 @@ fi
 service="verusd"
 user_home_dir=$HOME
 script_name=$(basename $(realpath "$0"))
-txcount_history_file="${user_home_dir}/txcount_hist.txt"
+tx_history_file="${user_home_dir}/tx_hist.json"
 verus_logs_dir=${user_home_dir}/verus-logs
 verus_debug_log=${user_home_dir}/.komodo/VRSC/debug.log
 
@@ -70,28 +70,28 @@ then
     remove_old_log_files
 fi
 
-# Create txcount_hist.txt file if NOT exists or value stored in txcount_hist.txt file is NOT integer.
-if [ ! -f $txcount_history_file ] || ! [[ "$(cat ${txcount_history_file})" =~ ^[0-9]+$ ]]
+# Create brand new $tx_history_file JSON file if NOT exists or value stored with 'txcount_previous' key is NOT integer.
+if [ ! -f $tx_history_file ] || ! [[ "$(jq -r '.txcount_previous' ${tx_history_file})" =~ ^[0-9]+$ ]]
 then
-    echo "0" > $txcount_history_file
+    jq -n '{txid_stake_previous: "", txcount_previous: 0}' > $tx_history_file
 fi
 
 # Get txcount data
-txcount_history=$(cat ${txcount_history_file})
+txcount_history=$(jq -r '.txcount_previous' ${tx_history_file})
 txcount_current=$(${user_home_dir}/verus-cli/verus getwalletinfo | jq -r '.txcount')
 
 # If txcount_current variable is NOT integer send mail and exit script.
 if ! [[ "$txcount_current" =~ ^[0-9]+$ ]]
 then
-    send_email "Local wallet problem!" "The 'verusd' is running, but output for call 'verus getwalletinfo | grep txcount...' is not integer. \nSend from script '$script_name'"
+    send_email "Local wallet problem!" "The 'verusd' is running, but output for call 'verus getwalletinfo | jq -r '.txcount'' is not integer. \nSend from script '$script_name'"
     exit 1
 fi
 
 # Check if txcount_current is bigger than last saved value.
 if (($txcount_current > $txcount_history))
 then
-    # Update txcount_history
-    echo $txcount_current > $txcount_history_file
+    # Update txcount_history - jq does not support update original JSON file in place (tempfile has been used)
+    cat $tx_history_file | jq --arg txcount_previous "$txcount_current" '.txcount_previous |= $txcount_previous' > ${tx_history_file}.tmp && mv ${tx_history_file}.tmp ${tx_history_file}
     immature_balance=$(${user_home_dir}/verus-cli/verus getwalletinfo | jq -r '.immature_balance')
     # Send email notification only when immature_balance is != 0
     if [[ $immature_balance != 0 ]]
