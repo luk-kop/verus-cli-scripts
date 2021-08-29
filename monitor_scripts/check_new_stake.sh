@@ -78,7 +78,7 @@ fi
 
 # Get txcount data
 txcount_history=$(cat ${txcount_history_file})
-txcount_current=$(${user_home_dir}/verus-cli/verus getwalletinfo | grep txcount | sed -r 's/.* ([0-9]+\.*[0-9]*).*?/\1/')
+txcount_current=$(${user_home_dir}/verus-cli/verus getwalletinfo | jq -r '.txcount')
 
 # If txcount_current variable is NOT integer send mail and exit script.
 if ! [[ "$txcount_current" =~ ^[0-9]+$ ]]
@@ -92,10 +92,12 @@ if (($txcount_current > $txcount_history))
 then
     # Update txcount_history
     echo $txcount_current > $txcount_history_file
-    stake_value=$(${user_home_dir}/verus-cli/verus getwalletinfo | grep immature_balance | awk '{print $2}' | sed 's/,$//')
+    immature_balance=$(${user_home_dir}/verus-cli/verus getwalletinfo | jq -r '.immature_balance')
     # Send email notification only when immature_balance is != 0
-    if [[ $stake_value != 0.00000000 ]]
+    if [[ $immature_balance != 0 ]]
     then
-        send_email "New tx in wallet" "You have new tx in your VRSC wallet! -> $stake_value VRSC"
+        # Get VRSC amount of last stake transaction
+        stake_value=$(${user_home_dir}/verus listtransactions "*" 20 | jq -r '[.[]|select(.category=="mint")]|.[-1].amount')
+        send_email "New STAKE in wallet" "You have new STAKE in your VRSC wallet! -> $stake_value VRSC"
     fi
 fi

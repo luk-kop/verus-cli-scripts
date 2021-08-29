@@ -38,6 +38,8 @@ Linux packages:
 * [mailutils](https://mailutils.org/) (`apt install -y mailutils` or `yum install -y mailx postfix`)
 * [git](https://git-scm.com/download/linux) (`apt install -y git` or `yum install -y git`)
 * [pip3](https://pip.pypa.io/en/stable/) (`apt install -y python3-pip` or `yum install -y python3-pip`)
+* [jq](https://stedolan.github.io/jq/) (`apt install -y jq` or `yum install -y jq`)
+> **Note**: With RHEL or CentOS distributions `jq` (JSON Processor) utility is available through EPEL Repository, so to install `jq` you need to first install EPEL Repository by using `yum install epel-release -y` command. 
 
 Other prerequisites:
 * The **Verus Coin (VRSC) CLI wallet** running on some Linux distribution. You can find appropriate wallet binaries on Verus Coin (VRSC) project website - [Verus wallet](https://verus.io/wallet/command-wallet).
