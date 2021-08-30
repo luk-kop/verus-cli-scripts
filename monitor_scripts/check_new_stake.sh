@@ -70,10 +70,11 @@ then
     remove_old_log_files
 fi
 
-# Create brand new $tx_history_file JSON file if NOT exists or value stored with 'txcount_previous' key is NOT integer.
-if [ ! -f $tx_history_file ] || ! [[ "$(jq -r '.txcount_previous' ${tx_history_file})" =~ ^[0-9]+$ ]]
+# Create brand new $tx_history_file JSON file if NOT exists OR value stored with 'txcount_previous' key is NOT integer AND
+# 'txid_stake_previous' key does not exist.
+if [ ! -f $tx_history_file ] || ! [[ "$(jq -r '.txcount_previous' ${tx_history_file})" =~ ^[0-9]+$ && "$(jq -r '.' ${tx_history_file} | jq 'has("txid_stake_previous")')" == "true" ]]
 then
-    jq -n '{txid_stake_previous: "", txcount_previous: 0}' > $tx_history_file
+    jq -n '{txid_stake_previous: "", txcount_previous: "0"}' > $tx_history_file
 fi
 
 # Get txcount data
