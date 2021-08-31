@@ -19,7 +19,7 @@
   * `unshield.sh` - moves coins from VRSC private address (z-address) to VRSC public address (R-address).
   * `getmininginfo.sh` - gets mining-related information.
   * `getwalletinfo.sh` - gets info about your wallet (immature & staking) balances.
-* The email notification can be temporarily disabled by changing the env variable `EMAIL_NOTIFICATION` to `"off"` in the `.env` file  (useful during wallet upgrade or maintenance).
+* The `check_new_stake.sh` script (email notification) can be temporarily disabled by changing the env variable `EMAIL_NOTIFICATION` to `"off"` in the `.env` file  (useful during wallet upgrade or maintenance).
 * Scripts get data from API of running `verud` daemon.
 * The email address to be notified of a new stake is stored in `.env` file (`EMAIL_TO_NOTIFY`).
 * The orphan stakes and new transactions (transferring cryptocurrency from/to wallet) are not counted.
@@ -45,6 +45,7 @@ Other prerequisites:
 * The **Verus Coin (VRSC) CLI wallet** running on some Linux distribution. You can find appropriate wallet binaries on Verus Coin (VRSC) project website - [Verus wallet](https://verus.io/wallet/command-wallet).
 * VRSC wallet binaries should be downloaded and extracted in user home directory (example after tarball extracted - `/home/username/verus-cli`)
 * The `Postfix` service (part of `mailutils` package) should be configured as a Send-Only SMTP Server for email notifications.
+* Scripts should NOT be used with a wallet that is also used for **solo VRSC mining**.
 
 ## Build and run the application
 1. Clone git repository to user home directory and enter `verus-cli-scripts` directory.
@@ -77,7 +78,7 @@ Other prerequisites:
     Add following lines to the `crontab` (please change your `username` accordingly):
     ```bash
     # crontab example:
-    */15 * * * * /home/username/verus-cli-scripts/monitor_scripts/check_new_stake.sh
+    */10 * * * * /home/username/verus-cli-scripts/monitor_scripts/check_new_stake.sh
     */30 * * * * /home/username/verus-cli-scripts/venv/bin/python /home/username/verus-cli-scripts/monitor_scripts/check_block.py
     ```
 5. To simplify the usage of the **daily usage scripts**, you can create symlinks (symbolic links) for particular scripts.
