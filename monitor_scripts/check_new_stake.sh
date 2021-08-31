@@ -74,11 +74,13 @@ then
     remove_old_log_files
 fi
 
-# Create brand-new JSON file ('$tx_history_file') if NOT exists OR value stored with 'txcount_previous' key is NOT integer AND
-# 'txid_stake_previous' key does not exist.
+# Create brand-new JSON file ('$tx_history_file') if NOT exists OR value stored with 'txcount_previous' key is NOT integer AND 'txid_stake_previous' key does not exist.
 if [ ! -f ${tx_history_file} ] || ! [[ "$(jq -r '.txcount_previous' ${tx_history_file})" =~ ^[0-9]+$ && "$(jq -r '.' ${tx_history_file} | jq 'has("txid_stake_previous")')" == "true" ]]
 then
-    jq -n '{txid_stake_previous: "", txcount_previous: "0"}' > $tx_history_file
+    # Get recent STAKE transaction id (txid) - under the hood below command get txid of most recent STAKE ("mint") tx from the last 50 wallet txs
+    txid_stake_init=$(${verus_cli} listtransactions "*" 50 | jq -r '[.[]|select(.category=="mint")]|.[-1].txid')
+    # Save initial wallet tx data to '$tx_history_file' - recent STAKE txid and txcount = 0
+    jq -n --arg txid_stake_previous "$txid_stake_init" '{txid_stake_previous: $txid_stake_previous, txcount_previous: "0"}' > $tx_history_file
 fi
 
 # Get 'txcount' data
@@ -97,12 +99,39 @@ if (($txcount_current > $txcount_history))
 then
     # Update 'txcount_previous' data  - jq does not support update original JSON file in place (.tmp file has been used)
     cat $tx_history_file | jq --arg txcount_previous "$txcount_current" '.txcount_previous |= $txcount_previous' > ${tx_history_file}.tmp && mv ${tx_history_file}.tmp ${tx_history_file}
+
+    # Get wallet's immature balance
+    # Note: The immature balance checking stuff is left in the script, but not really necessary anymore.
+    # The new stake detection in wallet is done by the compared txids.
     immature_balance=$(${verus_cli} getwalletinfo | jq -r '.immature_balance')
-    # Send email notification only when immature_balance is != 0
-    if [[ $immature_balance != 0 ]]
+
+    # Get STAKE txids data
+    txid_stake_saved=$(jq -r '.txid_stake_previous' ${tx_history_file})
+    txid_stake_recent=$(${verus_cli} listtransactions "*" 50 | jq -r '[.[]|select(.category=="mint")]|.[-1].txid')
+
+    # Send email notification only when immature_balance is != 0 AND recent STAKE txid is != last saved STAKE txid
+    if [[ "$immature_balance" != 0 && "$txid_stake_saved" != "$txid_stake_recent" ]]
     then
-        # Get VRSC amount of last STAKE transaction (tx) - under the hood below command get VRSC amount of the most recent STAKE ("mint") tx from the last 30 wallet txs
-        stake_value=$(${verus_cli} listtransactions "*" 30 | jq -r '[.[]|select(.category=="mint")]|.[-1].amount')
-        send_email "New STAKE in wallet" "You have new STAKE in your VRSC wallet! -> ${stake_value} VRSC"
+        # Get STAKE txids ("mint") from last 50 wallet txs (oldest at the top)
+        stake_txids=$(${verus_cli} listtransactions "*" 50 | jq -r '.[]|select(.category=="mint") | .txid')
+
+        # Loop over a list of recent STAKE txids
+        for stake_txid in $stake_txids
+        do
+            # Send email notification only for new STAKE txs
+            if [[ "$find_saved_txid" == "true" ]]
+            then
+                stake_value=$(${verus_cli} gettransaction ${stake_txid} | jq -r '.details | .[].amount')
+                send_email "New STAKE in wallet" "You have new STAKE in your VRSC wallet! -> ${stake_value} VRSC"
+            fi
+            # If the last saved/stored STAKE txid was encountered, it should be assumed that next txs in a loop are new.
+            if [[ "$stake_txid" == "$txid_stake_saved" ]]
+            then
+                # The helper variable '$find_saved_txid' is used to send a notification on the next execution of the loop
+                find_saved_txid="true"
+            fi
+        done
+        # Update 'txid_stake_previous' data - jq does not support update original JSON file in place (.tmp file has been used)
+        cat $tx_history_file | jq --arg last_txid "$stake_txid" '.txid_stake_previous |= $last_txid' > ${tx_history_file}.tmp && mv ${tx_history_file}.tmp ${tx_history_file}
     fi
 fi
