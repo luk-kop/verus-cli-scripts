@@ -122,7 +122,7 @@ then
             if [[ "$find_saved_txid" == "true" ]]
             then
                 stake_value=$(${verus_cli} gettransaction ${stake_txid} | jq -r '.details | .[].amount')
-                send_email "New STAKE in wallet" "You have new STAKE in your VRSC wallet! -> ${stake_value} VRSC"
+                send_email "New STAKE in wallet" "You have new STAKE in your VRSC wallet! -> ${stake_value} VRSC\ntxid = ${stake_txid}"
             fi
             # If the last saved/stored STAKE txid was encountered, it should be assumed that next txs in a loop are new.
             if [[ "$stake_txid" == "$txid_stake_saved" ]]
